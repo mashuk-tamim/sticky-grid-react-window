@@ -6,9 +6,12 @@ import React, {
   ReactNode,
   CSSProperties,
   useContext,
+  useCallback,
+  useMemo,
+  memo,
 } from "react";
 import AutoSizer from "react-virtualized-auto-sizer";
-import { FixedSizeGrid, GridChildComponentProps } from "react-window";
+import { areEqual, FixedSizeGrid, GridChildComponentProps } from "react-window";
 
 interface StickyRow {
   height: number;
@@ -31,6 +34,16 @@ interface TableGridContextType {
   stickyHeight: number;
   rowCount: number;
   columnCount: number;
+  createStickyColumn: (
+    rowCount: number,
+    stickyWidth: number,
+    rowHeight: number
+  ) => StickyRow[];
+  createStickyRow: (
+    columnCount: number,
+    columnWidth: number,
+    stickyHeight: number
+  ) => StickyHeader[];
 }
 
 interface StickyColumnsProps {
@@ -40,15 +53,9 @@ interface StickyColumnsProps {
 interface StickyHeaderProps {
   columns: StickyHeader[];
 }
-interface TableGridProps {
-  stickyWidth: number;
-  columnWidth: number;
-  rowHeight: number;
-  stickyHeight: number;
-  height: number;
+interface TableGridProps extends TableGridContextType {
   width: number;
-  columnCount: number;
-  rowCount: number;
+  height: number;
   children: React.FC<GridChildComponentProps>;
 }
 
@@ -74,11 +81,19 @@ const InnerGridElementType = forwardRef<
     rowHeight,
     stickyHeight,
     columnWidth,
+    createStickyColumn,
+    createStickyRow,
   } = context!;
 
-  const stickyRows = createStickyColumn(rowCount, stickyWidth, rowHeight);
+  const stickyRows = useMemo(
+    () => createStickyColumn(rowCount, stickyWidth, rowHeight),
+    [createStickyColumn, rowCount, stickyWidth, rowHeight]
+  );
 
-  const stickyHeaders = createStickyRow(columnCount, columnWidth, stickyHeight);
+  const stickyHeaders = useMemo(
+    () => createStickyRow(columnCount, columnWidth, stickyHeight),
+    [createStickyRow, columnCount, columnWidth, stickyHeight]
+  );
 
   const containerStyle: CSSProperties = {
     ...style,
@@ -108,6 +123,8 @@ const TableGrid: React.FC<TableGridProps> = ({
   stickyHeight,
   rowCount,
   columnCount,
+  createStickyColumn,
+  createStickyRow,
   children,
   ...rest
 }) => {
@@ -120,6 +137,8 @@ const TableGrid: React.FC<TableGridProps> = ({
         stickyHeight,
         rowCount,
         columnCount,
+        createStickyColumn,
+        createStickyRow,
       }}
     >
       <FixedSizeGrid
@@ -138,32 +157,73 @@ const TableGrid: React.FC<TableGridProps> = ({
   );
 };
 
-const GridCell = ({
-  rowIndex,
-  columnIndex,
-  style,
-}: GridChildComponentProps) => {
-  const columnStyle: CSSProperties = {
-    display: "flex",
-    flexDirection: "row",
-    alignItems: "center",
-    paddingLeft: 10,
-    borderRight: "1px solid gray",
-    borderBottom: "1px solid gray",
-    backgroundColor: "white",
-    color: "black",
-    ...style,
-  };
-  return <div style={columnStyle}>{`Cell ${rowIndex}, ${columnIndex}`}</div>;
-};
+const GridCell = memo(
+  ({ rowIndex, columnIndex, style }: GridChildComponentProps) => {
+    const columnStyle: CSSProperties = {
+      display: "flex",
+      flexDirection: "row",
+      alignItems: "center",
+      paddingLeft: 10,
+      borderRight: "1px solid gray",
+      borderBottom: "1px solid gray",
+      backgroundColor: "white",
+      color: "black",
+      ...style,
+    };
+    return <div style={columnStyle}>{`Cell ${rowIndex}, ${columnIndex}`}</div>;
+  },
+  areEqual
+);
 
-export default function StickyTableGrid() {
+GridCell.displayName = "GridCell";
+
+function StickyTableGrid() {
   const rowCount = 1000;
   const columnCount = 1000;
   const rowHeight = 30;
   const columnWidth = 120;
   const stickyWidth = 150;
   const stickyHeight = 50;
+  const createStickyColumn = useCallback(
+    (rowCount: number, stickyWidth: number, rowHeight: number) => {
+      const rows = [];
+      let currentTop = 0;
+
+      for (let i = 0; i < rowCount; i++) {
+        rows.push({
+          height: rowHeight,
+          width: stickyWidth,
+          top: currentTop,
+          label: `Sticky Row ${i}`,
+          rowIndexNumber: i,
+        });
+        currentTop += rowHeight;
+      }
+
+      return rows;
+    },
+    []
+  );
+  const createStickyRow = useCallback(
+    (columnCount: number, columnWidth: number, stickyHeight: number) => {
+      const columns = [];
+      let currentLeft = 0;
+
+      for (let i = 0; i < columnCount; i++) {
+        columns.push({
+          height: stickyHeight,
+          width: columnWidth,
+          left: currentLeft,
+          label: `Sticky Col ${i}`,
+        });
+        currentLeft += columnWidth;
+      }
+
+      return columns;
+    },
+    []
+  );
+
   return (
     <div
       style={{
@@ -191,6 +251,8 @@ export default function StickyTableGrid() {
             stickyHeight={stickyHeight}
             columnWidth={columnWidth}
             stickyWidth={stickyWidth}
+            createStickyColumn={createStickyColumn}
+            createStickyRow={createStickyRow}
           >
             {GridCell}
           </TableGrid>
@@ -298,44 +360,4 @@ const StickyHeader: React.FC<StickyHeaderProps> = ({ columns }) => {
   );
 };
 
-const createStickyColumn = (
-  rowCount: number,
-  stickyWidth: number,
-  rowHeight: number
-) => {
-  const rows = [];
-  let currentTop = 0;
-
-  for (let i = 0; i < rowCount; i++) {
-    rows.push({
-      height: rowHeight,
-      width: stickyWidth,
-      top: currentTop,
-      label: `Sticky Row ${i}`,
-      rowIndexNumber: i,
-    });
-    currentTop += rowHeight;
-  }
-
-  return rows;
-};
-const createStickyRow = (
-  columnCount: number,
-  columnWidth: number,
-  stickyHeight: number
-) => {
-  const columns = [];
-  let currentLeft = 0;
-
-  for (let i = 0; i < columnCount; i++) {
-    columns.push({
-      height: stickyHeight,
-      width: columnWidth,
-      left: currentLeft,
-      label: `Sticky Col ${i}`,
-    });
-    currentLeft += columnWidth;
-  }
-
-  return columns;
-};
+export default memo(StickyTableGrid, areEqual);
