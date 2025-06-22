@@ -1,103 +1,341 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import React, {
+  createContext,
+  forwardRef,
+  ReactNode,
+  CSSProperties,
+  useContext,
+} from "react";
+import AutoSizer from "react-virtualized-auto-sizer";
+import { FixedSizeGrid, GridChildComponentProps } from "react-window";
+
+interface StickyRow {
+  height: number;
+  width: number;
+  top: number;
+  label: string;
+}
+
+interface StickyHeader {
+  height: number;
+  width: number;
+  left: number;
+  label: string;
+}
+
+interface TableGridContextType {
+  stickyWidth: number;
+  columnWidth: number;
+  rowHeight: number;
+  stickyHeight: number;
+  rowCount: number;
+  columnCount: number;
+}
+
+interface StickyColumnsProps {
+  rows: StickyRow[];
+}
+
+interface StickyHeaderProps {
+  columns: StickyHeader[];
+}
+interface TableGridProps {
+  stickyWidth: number;
+  columnWidth: number;
+  rowHeight: number;
+  stickyHeight: number;
+  height: number;
+  width: number;
+  columnCount: number;
+  rowCount: number;
+  children: React.FC<GridChildComponentProps>;
+}
+
+interface InnerGridElementTypeProps {
+  children: ReactNode[];
+  style?: CSSProperties;
+}
+const TableGridContext = createContext<TableGridContextType | undefined>(
+  undefined
+);
+TableGridContext.displayName = "TableGridContext";
+
+const InnerGridElementType = forwardRef<
+  HTMLDivElement,
+  InnerGridElementTypeProps
+>(({ children, style, ...rest }, ref) => {
+  const context = useContext(TableGridContext);
+
+  const {
+    stickyWidth,
+    rowCount,
+    columnCount,
+    rowHeight,
+    stickyHeight,
+    columnWidth,
+  } = context!;
+
+  const stickyRows = createStickyColumn(rowCount, stickyWidth, rowHeight);
+
+  const stickyHeaders = createStickyRow(columnCount, columnWidth, stickyHeight);
+
+  const containerStyle: CSSProperties = {
+    ...style,
+    position: "relative",
+  };
+
+  const gridDataContainerStyle: CSSProperties = {
+    position: "absolute",
+    top: stickyHeight,
+    left: stickyWidth,
+  };
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div ref={ref} style={containerStyle} {...rest}>
+      <StickyHeader columns={stickyHeaders} />
+      <StickyColumns rows={stickyRows} />
+      <div style={gridDataContainerStyle}>{children}</div>
+    </div>
+  );
+});
+InnerGridElementType.displayName = "InnerGridElementType";
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+const TableGrid: React.FC<TableGridProps> = ({
+  stickyWidth,
+  columnWidth,
+  rowHeight,
+  stickyHeight,
+  rowCount,
+  columnCount,
+  children,
+  ...rest
+}) => {
+  return (
+    <TableGridContext.Provider
+      value={{
+        stickyWidth,
+        columnWidth,
+        rowHeight,
+        stickyHeight,
+        rowCount,
+        columnCount,
+      }}
+    >
+      <FixedSizeGrid
+        columnWidth={columnWidth}
+        rowHeight={rowHeight}
+        rowCount={rowCount}
+        columnCount={columnCount}
+        innerElementType={InnerGridElementType}
+        overscanRowCount={100}
+        overscanColumnCount={100}
+        {...rest}
+      >
+        {children}
+      </FixedSizeGrid>
+    </TableGridContext.Provider>
+  );
+};
+
+const GridCell = ({
+  rowIndex,
+  columnIndex,
+  style,
+}: GridChildComponentProps) => {
+  const columnStyle: CSSProperties = {
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingLeft: 10,
+    borderRight: "1px solid gray",
+    borderBottom: "1px solid gray",
+    backgroundColor: "white",
+    color: "black",
+    ...style,
+  };
+  return <div style={columnStyle}>{`Cell ${rowIndex}, ${columnIndex}`}</div>;
+};
+
+export default function StickyTableGrid() {
+  const rowCount = 1000;
+  const columnCount = 1000;
+  const rowHeight = 30;
+  const columnWidth = 120;
+  const stickyWidth = 150;
+  const stickyHeight = 50;
+  return (
+    <div
+      style={{
+        fontFamily: "sans-serif",
+        textAlign: "center",
+      }}
+    >
+      <h1
+        style={{
+          fontSize: "24px",
+          marginBottom: "20px",
+          textAlign: "center",
+        }}
+      >
+        Sticky Table Grid Example
+      </h1>
+      <AutoSizer>
+        {({ width }) => (
+          <TableGrid
+            width={width}
+            height={500}
+            columnCount={columnCount}
+            rowCount={rowCount}
+            rowHeight={rowHeight}
+            stickyHeight={stickyHeight}
+            columnWidth={columnWidth}
+            stickyWidth={stickyWidth}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+            {GridCell}
+          </TableGrid>
+        )}
+      </AutoSizer>
     </div>
   );
 }
+
+const StickyColumns: React.FC<StickyColumnsProps> = ({ rows }) => {
+  const context = useContext(TableGridContext);
+
+  const { stickyHeight } = context!;
+  const containerStyle: CSSProperties = {
+    position: "sticky",
+    left: 0,
+    zIndex: 2,
+    width: "min-content",
+    height: "100%",
+    backgroundColor: "lightblue",
+    top: stickyHeight,
+  };
+
+  return (
+    <div style={containerStyle}>
+      {rows.map(({ label, height, width, top }, i) => {
+        const rowStyle: CSSProperties = {
+          position: "absolute",
+          display: "flex",
+          flexDirection: "row",
+          alignItems: "center",
+          paddingLeft: 10,
+          borderBottom: "1px solid gray",
+          borderRight: "1px solid gray",
+          backgroundColor: "white",
+          color: "black",
+          height,
+          width,
+          top,
+        };
+        return (
+          <div key={i}>
+            <div style={rowStyle}>{label}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+const StickyHeader: React.FC<StickyHeaderProps> = ({ columns }) => {
+  const context = useContext(TableGridContext);
+
+  const { stickyHeight, stickyWidth } = context!;
+  return (
+    <div
+      style={{
+        position: "sticky",
+        top: 0,
+        left: 0,
+        display: "flex",
+        flexDirection: "row",
+        zIndex: 3,
+        backgroundColor: "white",
+        color: "black",
+        height: stickyHeight,
+        boxSizing: "border-box",
+      }}
+    >
+      <div
+        style={{
+          position: "sticky",
+          zIndex: 4,
+          top: 0,
+          left: 0,
+          backgroundColor: "white",
+          width: stickyWidth,
+          height: stickyHeight,
+          flexShrink: 0,
+          borderBottom: "1px solid gray",
+          borderRight: "1px solid gray",
+        }}
+      />
+      {columns.map(({ label, height, width }, i) => {
+        const headerStyle: CSSProperties = {
+          position: "relative",
+          flex: 1,
+          backgroundColor: "white",
+          color: "black",
+          height,
+          width,
+          borderBottom: "1px solid gray",
+          borderRight: "1px solid gray",
+          display: "flex",
+          flexDirection: "row",
+          alignItems: "center",
+          paddingLeft: 10,
+        };
+        return (
+          <div key={i}>
+            <div style={headerStyle}>{label}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+const createStickyColumn = (
+  rowCount: number,
+  stickyWidth: number,
+  rowHeight: number
+) => {
+  const rows = [];
+  let currentTop = 0;
+
+  for (let i = 0; i < rowCount; i++) {
+    rows.push({
+      height: rowHeight,
+      width: stickyWidth,
+      top: currentTop,
+      label: `Sticky Row ${i}`,
+      rowIndexNumber: i,
+    });
+    currentTop += rowHeight;
+  }
+
+  return rows;
+};
+const createStickyRow = (
+  columnCount: number,
+  columnWidth: number,
+  stickyHeight: number
+) => {
+  const columns = [];
+  let currentLeft = 0;
+
+  for (let i = 0; i < columnCount; i++) {
+    columns.push({
+      height: stickyHeight,
+      width: columnWidth,
+      left: currentLeft,
+      label: `Sticky Col ${i}`,
+    });
+    currentLeft += columnWidth;
+  }
+
+  return columns;
+};
