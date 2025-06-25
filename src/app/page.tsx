@@ -147,8 +147,8 @@ const TableGrid: React.FC<TableGridProps> = ({
         rowCount={rowCount}
         columnCount={columnCount}
         innerElementType={InnerGridElementType}
-        overscanRowCount={100}
-        overscanColumnCount={100}
+        overscanRowCount={0}
+        overscanColumnCount={0}
         {...rest}
       >
         {children}
@@ -235,6 +235,7 @@ function StickyTableGrid() {
       style={{
         fontFamily: "sans-serif",
         textAlign: "center",
+        paddingTop: "20px",
       }}
     >
       <h1
@@ -244,7 +245,7 @@ function StickyTableGrid() {
           textAlign: "center",
         }}
       >
-        Sticky Table Grid Example
+        Sticky Table Grid Using React Window
       </h1>
       <AutoSizer>
         {({ width }) => (
