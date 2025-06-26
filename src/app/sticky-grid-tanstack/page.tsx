@@ -21,7 +21,7 @@ const StickyTableGrid = () => {
     count: rowCount,
     getScrollElement: () => scrollElementRef.current,
     estimateSize: () => rowHeight,
-    overscan: 0,
+    overscan: 10,
   });
 
   // Column virtualizer
@@ -30,7 +30,7 @@ const StickyTableGrid = () => {
     getScrollElement: () => scrollElementRef.current,
     estimateSize: () => columnWidth,
     horizontal: true,
-    overscan: 0,
+    overscan: 10,
   });
 
   // Memoize virtual items to prevent unnecessary recalculations
@@ -62,7 +62,6 @@ const StickyTableGrid = () => {
         style={{
           width: "100vw",
           height: containerHeight,
-          position: "relative",
           margin: "0 auto",
         }}
       >
@@ -73,7 +72,6 @@ const StickyTableGrid = () => {
             width: "100%",
             height: "100%",
             overflow: "auto",
-            position: "relative",
           }}
         >
           {/* Main content area - this creates the scrollable space */}
