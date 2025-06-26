@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, memo, useMemo } from "react";
+import { useRef} from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
 const StickyTableGrid = () => {
@@ -16,54 +16,29 @@ const StickyTableGrid = () => {
   // Single scroll element for everything
   const scrollElementRef = useRef(null);
 
-  const rowVirtualizerOptions = useMemo(
-    () => ({
-      count: rowCount,
-      getScrollElement: () => scrollElementRef.current,
-      estimateSize: () => rowHeight,
-      overscan: 0,
-    }),
-    [rowCount, rowHeight]
-  );
   // Row virtualizer
-  const rowVirtualizer = useVirtualizer(rowVirtualizerOptions);
-
-  const columnVirtualizerOptions = useMemo(
-    () => ({
-      count: columnCount,
-      getScrollElement: () => scrollElementRef.current,
-      estimateSize: () => columnWidth,
-      horizontal: true,
-      overscan: 0,
-    }),
-    [columnCount, columnWidth]
-  );
+  const rowVirtualizer = useVirtualizer({
+    count: rowCount,
+    getScrollElement: () => scrollElementRef.current,
+    estimateSize: () => rowHeight,
+    overscan: 0,
+  });
 
   // Column virtualizer
-  const columnVirtualizer = useVirtualizer(columnVirtualizerOptions);
+  const columnVirtualizer = useVirtualizer({
+    count: columnCount,
+    getScrollElement: () => scrollElementRef.current,
+    estimateSize: () => columnWidth,
+    horizontal: true,
+    overscan: 0,
+  });
 
   // Memoize virtual items to prevent unnecessary recalculations
-  const virtualRows = useMemo(
-    () => rowVirtualizer.getVirtualItems(),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [rowVirtualizer.getVirtualItems()]
-  );
-  const virtualColumns = useMemo(
-    () => columnVirtualizer.getVirtualItems(),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [columnVirtualizer.getVirtualItems()]
-  );
+  const virtualRows = rowVirtualizer.getVirtualItems();
+  const virtualColumns = columnVirtualizer.getVirtualItems();
 
-  const totalRowSize = useMemo(
-    () => rowVirtualizer.getTotalSize(),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [rowVirtualizer.getTotalSize()]
-  );
-  const totalColumnSize = useMemo(
-    () => columnVirtualizer.getTotalSize(),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [columnVirtualizer.getTotalSize()]
-  );
+  const totalRowSize = rowVirtualizer.getTotalSize()
+  const totalColumnSize = columnVirtualizer.getTotalSize();
 
   return (
     <div
@@ -250,4 +225,4 @@ const StickyTableGrid = () => {
   );
 };
 
-export default memo(StickyTableGrid);
+export default StickyTableGrid;
